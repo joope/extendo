@@ -1,0 +1,17 @@
+{
+  "manifest_version": 2,
+
+  "name": "Bugger",
+  "description": "Tool for debugging your site with human input",
+  "version": "0.1",
+
+  "browser_action": {
+    "default_icon": "icon.png",
+    "default_popup": "popup.html",
+    "default_title": "Paina tästä!"
+  },
+  "permissions": [
+    "activeTab",
+    "storage"
+  ]
+}
