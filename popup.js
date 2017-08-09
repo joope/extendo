@@ -100,6 +100,7 @@ function TodoList(url) {
  this.fetchTodos = function(cb) {
    chrome.storage.local.get(this.url, (items) => {
      if (!items || Object.keys(items).length == 0) {
+       cb('?');
        return;
      }
      this.addTodos(items[this.url]);
