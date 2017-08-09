@@ -1,13 +1,128 @@
-// Copyright (c) 2014 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 /**
  * Get the current URL.
  *
  * @param {function(string)} callback - called when the URL of the current tab
  *   is found.
  */
+
+function Todo(text, done) {
+ this.text = text;
+ this.done = done;
+
+ this.markDone = function(done) {
+   this.done = done;
+ }
+
+ this.modify = function(newText) {
+   this.text = newText;
+ }
+
+ this.render = function(index) {
+   const todo = document.createElement('li');
+
+   const check = document.createElement('input');
+   check.type = 'checkbox';
+   check.value = index;
+
+   const remove = document.createElement('button');
+   remove.innerHTML = 'X';
+   remove.value = index;
+
+   if (this.done) {
+     todo.className = 'done';
+     check.checked = true;
+   }
+
+   const text = document.createTextNode(this.text);
+
+   todo.appendChild(check);
+   todo.appendChild(text);
+   todo.appendChild(remove);
+   return todo;
+ }
+}
+
+function TodoList(url) {
+ this.todos = [];
+ this.done = 0;
+ this.url = url;
+
+ this.update = function() {
+   this.render(this.todos);
+   this.save();
+ }
+
+ this.doneToString = function() {
+   return this.done + '/' + this.todos.length;
+ }
+
+ this.addTodo = function(name, done) {
+   this.todos.push(new Todo(name, done));
+   if (done) {
+     this.done++;
+   }
+ }
+
+ this.addTodos = function(todos) {
+   for (let i in todos) {
+     this.addTodo(todos[i].text, todos[i].done);
+   }
+ }
+
+ this.removeTodo = function(index) {
+   if (this.todos[index].done) {
+     this.done--;
+   }
+   this.todos.splice(index, 1);
+ }
+
+ this.modifyTodo = function(index, newText) {
+   this.todos[index].modifyTodo(newText);
+ }
+
+ this.markDone = function(index) {
+   const todo = this.todos[index];
+   if (todo.done) {
+     todo.markDone(false);
+     this.done--;
+   } else {
+     todo.markDone(true);
+     this.done++;
+   }
+ }
+
+ this.save = function() {
+   const todos = {};
+   todos[this.url] = this.todos;
+   chrome.storage.local.set(todos);
+ }
+
+ this.fetchTodos = function(cb) {
+   chrome.storage.local.get(this.url, (items) => {
+     if (!items || Object.keys(items).length == 0) {
+       return;
+     }
+     this.addTodos(items[this.url]);
+     this.render(this.todos);
+     cb(this.doneToString());
+   });
+ }
+
+ this.render = function(todos) {
+   if (todos.length === 0) {
+     return;
+   }
+   const list = document.createElement('ol');
+
+   for (let i = 0; i < todos.length; i++) {
+     list.appendChild(todos[i].render(i));
+   }
+
+   const oldList = document.getElementById('todo-list').firstChild;
+   document.getElementById('todo-list').replaceChild(list, oldList);
+ }
+}
+
 function getCurrentTabUrl(callback) {
   // Query filter to be passed to chrome.tabs.query - see
   // https://developer.chrome.com/extensions/tabs#method-query
@@ -56,49 +171,38 @@ function getCurrentTabUrl(callback) {
  */
 
 let currentUrl;
-let currentTodos = [];
-let undone = 0;
+let todolist;
 
 function update() {
-  renderTodos();
-  updateMarkers(undone + '');
-  saveTodos();
+  todolist.update();
+  updateMarkers(todolist.doneToString());
 }
 
 function updateMarkers(text) {
-  if(text) {
+  if (text) {
     chrome.browserAction.setBadgeBackgroundColor({color:[100, 100, 100, 230]});
     chrome.browserAction.setBadgeText({text: text});
   }
 }
 
-function getTodos(callback, errorCallback) {
-  chrome.storage.local.get(currentUrl, function(items) {
-    if(!items || Object.keys(items).length == 0) {
-      errorCallback();
-      return;
-    }
-    callback(items[currentUrl]);
-  })
-}
-
-function saveTodos() {
-  if(currentUrl && currentTodos) {
-    const todos = {};
-    todos[currentUrl] = currentTodos;
-    chrome.storage.local.set(todos);
-  }
-}
-
 function addTodo(content) {
-  currentTodos.push({done: false, text: content});
+  todolist.addTodo(content, false);
   update();
 }
 
 function markDone(target){
-  if (currentTodos && target.value) {
-    const todo = currentTodos[target.value];
-    todo.done = !todo.done;
+  if (todolist && target.value) {
+    todolist.markDone(target.value);
+    todolist.save();
+  }
+}
+
+function removeTodo(target) {
+  console.log(target);
+  if (todolist && target.value) {
+    todolist.removeTodo(target.value);
+    todolist.save();
+    update();
   }
 }
 
@@ -122,47 +226,12 @@ function handleClick(event) {
     case 'li':
       modifyTodo(event.target);
       break;
+    case 'button':
+      removeTodo(event.target);
     default:
       return;
   }
-
   update();
-}
-
-function renderTodos(ordered) {
-  if(!currentTodos) {
-    renderStatus('No todos found, create a new one');
-    return;
-  }
-  const todos = currentTodos;
-  const list = document.createElement('ol');
-  undone = 0;
-
-  for (let i=0; i<todos.length; i++) {
-    const todo = document.createElement('li');
-
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.value = i;
-
-    if(todos[i].done) {
-      todo.className = 'done';
-      check.checked = true;
-    } else {
-      undone++;
-    }
-
-    const text = document.createTextNode(todos[i].text);
-
-    todo.appendChild(check);
-    todo.appendChild(text);
-
-    list.appendChild(todo);
-  }
-
-  const oldList = document.getElementById('todo-list').firstChild;
-  document.getElementById('todo-list').replaceChild(list, oldList);
-  renderStatus(currentUrl);
 }
 
 function renderStatus(statusText) {
@@ -185,15 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
   getCurrentTabUrl(function(url) {
     currentUrl = url;
     renderStatus(url);
-
-    getTodos(function(todos) {
-      currentTodos = todos;
-      renderStatus(currentUrl);
-      update();
-
-    }, function(errorMessage) {
-      renderStatus('No todos found, create a new one');
-      updateMarkers('');
-    });
+    todolist = new TodoList(url);
+    todolist.fetchTodos(updateMarkers);
   });
 });
