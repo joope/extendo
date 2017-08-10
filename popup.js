@@ -46,6 +46,7 @@ function TodoList(url) {
  this.todos = [];
  this.done = 0;
  this.url = url;
+ this.modified;
 
  this.update = function() {
    this.render(this.todos);
@@ -77,6 +78,7 @@ function TodoList(url) {
  }
 
  this.modifyTodo = function(index, newText) {
+   this.modified = index;
    this.todos[index].modifyTodo(newText);
  }
 
@@ -97,15 +99,16 @@ function TodoList(url) {
    chrome.storage.local.set(todos);
  }
 
- this.fetchTodos = function(cb) {
+ this.fetchTodos = function(setBadge) {
    chrome.storage.local.get(this.url, (items) => {
+     console.log(items);
      if (!items || Object.keys(items).length == 0) {
-       cb('?');
+       setBadge('');
        return;
      }
      this.addTodos(items[this.url]);
      this.render(this.todos);
-     cb(this.doneToString());
+     setBadge(this.doneToString());
    });
  }
 
@@ -163,14 +166,6 @@ function getCurrentTabUrl(callback) {
   // alert(url); // Shows "undefined", because chrome.tabs.query is async.
 }
 
-/**
- * @param {string} searchTerm - Search term for Google Image search.
- * @param {function(string,number,number)} callback - Called when an image has
- *   been found. The callback gets the URL, width and height of the image.
- * @param {function(string)} errorCallback - Called when the image is not found.
- *   The callback gets a string that describes the failure reason.
- */
-
 let currentUrl;
 let todolist;
 
@@ -180,10 +175,8 @@ function update() {
 }
 
 function updateMarkers(text) {
-  if (text) {
-    chrome.browserAction.setBadgeBackgroundColor({color:[100, 100, 100, 230]});
-    chrome.browserAction.setBadgeText({text: text});
-  }
+  chrome.browserAction.setBadgeBackgroundColor({color:[100, 100, 100, 230]});
+  chrome.browserAction.setBadgeText({text: text});
 }
 
 function addTodo(content) {
@@ -208,14 +201,7 @@ function removeTodo(target) {
 }
 
 function modifyTodo(target){
-  const modify = document.createElement('input');
-  modify.type = 'text';
-  modify.value = target.outerText;
-  modify.addEventListener(function(event){
-
-  })
-  target = modify;
-  modify.focus();
+  //modify target index
 }
 
 function handleClick(event) {
@@ -223,16 +209,18 @@ function handleClick(event) {
   switch (event.target.localName) {
     case 'input':
       markDone(event.target);
+      update();
       break;
     case 'li':
       modifyTodo(event.target);
       break;
     case 'button':
       removeTodo(event.target);
+      update();
     default:
       return;
   }
-  update();
+  //update();
 }
 
 function renderStatus(statusText) {

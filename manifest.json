@@ -10,8 +10,12 @@
     "default_popup": "popup.html",
     "default_title": "Paina tästä!"
   },
+  "background": {
+    "scripts": ["background.js"]
+  },
   "permissions": [
     "activeTab",
+    "tabs",
     "storage"
   ]
 }
