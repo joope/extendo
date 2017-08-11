@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
 
-  "name": "Bugger",
-  "description": "Tool for debugging your site with human input",
+  "name": "Extendo",
+  "description": "Todo extension for chrome",
   "version": "0.1",
 
   "browser_action": {
