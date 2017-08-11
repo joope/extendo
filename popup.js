@@ -19,6 +19,7 @@ function Todo(text, done) {
 
  this.render = function(index) {
    const todo = document.createElement('li');
+   todo.dataset.id = index;
 
    const check = document.createElement('input');
    check.type = 'checkbox';
@@ -77,19 +78,27 @@ function TodoList(url) {
    this.todos.splice(index, 1);
  }
 
- this.modifyTodo = function(index, newText) {
+ this.modifyTodo = function(index) {
    this.modified = index;
-   this.todos[index].modifyTodo(newText);
+ }
+
+ this.doneModifying = function(newText) {
+   if(this.modified && newText) {
+     this.todos[this.modified].modify(newText);
+     this.modified = null;
+   }
  }
 
  this.markDone = function(index) {
    const todo = this.todos[index];
-   if (todo.done) {
-     todo.markDone(false);
-     this.done--;
-   } else {
-     todo.markDone(true);
-     this.done++;
+   if(todo) {
+     if (todo.done) {
+       todo.markDone(false);
+       this.done--;
+     } else {
+       todo.markDone(true);
+       this.done++;
+     }
    }
  }
 
@@ -113,17 +122,37 @@ function TodoList(url) {
  }
 
  this.render = function(todos) {
-   if (todos.length === 0) {
-     return;
-   }
    const list = document.createElement('ol');
 
    for (let i = 0; i < todos.length; i++) {
-     list.appendChild(todos[i].render(i));
+     if(this.modified == i) {
+       const input = document.createElement('input');
+       const todo = document.createElement('li');
+       input.type = 'text';
+       input.value = this.todos[i].text;
+       input.id = 'modifying';
+      //  input.style.width = input.value.length + 'em'};
+       input.addEventListener('keydown', (event) => {
+         var input = event.target.value;
+         if (input && event.keyCode == 13) {
+           event.preventDefault();
+           this.doneModifying(input);
+           this.update();
+         }
+       })
+       todo.appendChild(input);
+       list.appendChild(todo);
+     } else {
+       list.appendChild(todos[i].render(i));
+     }
+
    }
 
    const oldList = document.getElementById('todo-list').firstChild;
    document.getElementById('todo-list').replaceChild(list, oldList);
+   if (document.getElementById('modifying')) {
+     document.getElementById('modifying').focus();
+   }
  }
 }
 
@@ -185,6 +214,7 @@ function addTodo(content) {
 }
 
 function markDone(target){
+  console.log(target);
   if (todolist && target.value) {
     todolist.markDone(target.value);
     todolist.save();
@@ -195,13 +225,15 @@ function removeTodo(target) {
   console.log(target);
   if (todolist && target.value) {
     todolist.removeTodo(target.value);
-    todolist.save();
-    update();
+    todolist.update();
   }
 }
 
 function modifyTodo(target){
   //modify target index
+  console.log(target);
+  todolist.modifyTodo(target.dataset.id);
+  todolist.update();
 }
 
 function handleClick(event) {
