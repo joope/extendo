@@ -14,12 +14,25 @@ function checkTodos(url) {
         done++;
       }
     }
-    const badgeText = done + '/' + total;
-    chrome.browserAction.setBadgeText({text: badgeText});
+    updateMarkers(done, total);
   });
 }
 
-chrome.browserAction.setBadgeBackgroundColor({color:[100, 100, 100, 230]});
+function updateMarkers(done, total) {
+  if (done == 0 && total > 0) {
+    chrome.browserAction.setBadgeBackgroundColor({color:[220, 0, 0, 255]});
+  } else if (done > 0 && done !== total) {
+    chrome.browserAction.setBadgeBackgroundColor({color:[200, 200, 100, 255]});
+  } else if (done !== 0 && done == total){
+    chrome.browserAction.setBadgeBackgroundColor({color:[0, 200, 0, 255]});
+  } else {
+    chrome.browserAction.setBadgeBackgroundColor({color:[120, 120, 120, 255]});
+  }
+  const text = `${done}/${total}`;
+  chrome.browserAction.setBadgeText({text: text});
+}
+
+
 chrome.tabs.onUpdated.addListener(
   function(tabId, changeInfo, tab){
     checkTodos(tab.url);

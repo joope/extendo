@@ -49,13 +49,10 @@ function TodoList(url) {
  this.url = url;
  this.modified;
 
- this.update = function() {
+ this.update = function(updateMarkers) {
    this.render(this.todos);
    this.save();
- }
-
- this.doneToString = function() {
-   return this.done + '/' + this.todos.length;
+   updateMarkers(this.done, this.todos.length);
  }
 
  this.addTodo = function(name, done) {
@@ -108,7 +105,7 @@ function TodoList(url) {
    chrome.storage.local.set(todos);
  }
 
- this.fetchTodos = function(setBadge) {
+ this.fetchTodos = function(updateMarkers) {
    chrome.storage.local.get(this.url, (items) => {
      console.log(items);
      if (!items || Object.keys(items).length == 0) {
@@ -117,7 +114,7 @@ function TodoList(url) {
      }
      this.addTodos(items[this.url]);
      this.render(this.todos);
-     setBadge(this.doneToString());
+     updateMarkers(this.done, this.todos.length);
    });
  }
 
@@ -199,12 +196,20 @@ let currentUrl;
 let todolist;
 
 function update() {
-  todolist.update();
-  updateMarkers(todolist.doneToString());
+  todolist.update(updateMarkers);
 }
 
-function updateMarkers(text) {
-  chrome.browserAction.setBadgeBackgroundColor({color:[100, 100, 100, 230]});
+function updateMarkers(done, total) {
+  if (done == 0 && total > 0) {
+    chrome.browserAction.setBadgeBackgroundColor({color:[220, 0, 0, 255]});
+  } else if (done > 0 && done !== total) {
+    chrome.browserAction.setBadgeBackgroundColor({color:[200, 200, 0, 255]});
+  } else if (done !== 0 && done == total){
+    chrome.browserAction.setBadgeBackgroundColor({color:[0, 200, 0, 255]});
+  } else {
+    chrome.browserAction.setBadgeBackgroundColor({color:[120, 120, 120, 255]});
+  }
+  const text = `${done}/${total}`;
   chrome.browserAction.setBadgeText({text: text});
 }
 
@@ -225,7 +230,7 @@ function removeTodo(target) {
   console.log(target);
   if (todolist && target.value) {
     todolist.removeTodo(target.value);
-    todolist.update();
+    update();
   }
 }
 
@@ -233,7 +238,7 @@ function modifyTodo(target){
   //modify target index
   console.log(target);
   todolist.modifyTodo(target.dataset.id);
-  todolist.update();
+  update();
 }
 
 function handleClick(event) {
